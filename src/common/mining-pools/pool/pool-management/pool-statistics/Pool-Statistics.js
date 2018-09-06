@@ -78,6 +78,8 @@ class PoolStatistics{
 
         this.poolHashes = array[Math.floor(array.length / 4)];
 
+        this.poolHashes *= 10000;
+
         this.emitter.emit("pools/statistics/update", { poolHashes: this.poolHashes,
             poolMinersOnline: this.poolMinersOnline.length,
             poolBeingConfirmed: this.poolBlocksBeingConfirmed,
