@@ -11,6 +11,7 @@ class TransactionsDownloadManager{
         this.transactionsProtocol = transactionsProtocol;
 
         this._socketsQueue = [];
+        this._bannedSockets = [];
         this._transactionsQueue = [];
 
         NodesList.emitter.on("nodes-list/disconnected", (result) => {
@@ -20,7 +21,17 @@ class TransactionsDownloadManager{
         setTimeout( this._processSockets.bind(this), 5000 );
         setTimeout( this._processTransactions.bind(this), 2*1000 );
         setTimeout( this._deleteOldTransactions.bind(this), 2*60*1000 );
+        setTimeout( this._clearBannedList(), 60*60*1000 );
 
+    }
+
+    findBannedSocket(socket, returnPos = false){
+
+        for (let i=0; i<this._bannedSockets.length; i++)
+            if (this._bannedSockets[i] === socket)
+                return returnPos ? i :  this._bannedSockets[i];
+
+        return returnPos ? -1 : null;
     }
 
     findSocket(socket, returnPos = false){
@@ -34,8 +45,9 @@ class TransactionsDownloadManager{
 
     addSocket(socket){
 
-        if (this.findSocket(socket) === null)
-            this._socketsQueue.push(socket);
+        if ( this.findBannedSocket(socket)!==null )
+            if (this.findSocket(socket) === null)
+                this._socketsQueue.push(socket);
 
     }
 
@@ -58,26 +70,54 @@ class TransactionsDownloadManager{
             return false; //too many;
         }
 
-        let transactionFound = this.findTransactionById(txId);
-        if ( transactionFound  === null) {
+        if ( this.findBannedSocket(socket)!==null ){
 
-            this._transactionsQueue.push({
-                txId: txId,
-                buffer: buffer,
-                socket: socket,
-                dateInitial: new Date().getTime(),
-                deleted: false,
-            });
+            let transactionFound = this.findTransactionById(txId);
+            if ( transactionFound  === null) {
 
-            return true;
+                this._transactionsQueue.push({
+                    txId: txId,
+                    buffer: buffer,
+                    socket: socket,
+                    dateInitial: new Date().getTime(),
+                    deleted: false,
+                });
 
-        } else {
+                return true;
 
-            transactionFound.socket = socket;
+            } else {
+
+                transactionFound.socket = socket;
+
+            }
 
         }
 
         return false;
+    }
+
+    socketPenalty(socket){
+
+        let defendantPosition = this.findBannedSocket(socket,true);
+
+        if (defendantPosition === null || defendantPosition === undefined){
+            this._bannedSockets.push(socket);
+            this._bannedSockets[this._bannedSockets.length - 1].penaltyPoints = 1;
+            this._bannedSockets[this._bannedSockets.length - 1].penaltyTime = new Date().getTime();
+        }else
+            if (this._socketsQueue[defendantPosition].penaltyPoints > 5)
+                this._unsubscribeSocket(socket);
+            else
+                this._socketsQueue[defendantPosition].penaltyPoints ++;
+
+    }
+
+    _clearBannedList(){
+
+        for (let i=0; i<this._bannedSockets.length; i++)
+            if (new Date().getTime() - this._bannedSockets[i].penaltyTime > 1000*60*60)
+                this._bannedSockets.splice(i, 1);
+
     }
 
     async _processSockets(){
@@ -139,6 +179,9 @@ class TransactionsDownloadManager{
                     if (Buffer.isBuffer(tx.buffer))
                         transaction = this._createTransaction(tx.buffer, tx.socket);
 
+                    if (transaction===null || transaction===undefined)
+                        this.socketPenalty(tx.socket);
+
                 } catch (exception){
 
                 }
@@ -190,6 +233,7 @@ class TransactionsDownloadManager{
             this.blockchain.transactions.pendingQueue.includePendingTransaction(transaction, socket);
 
             return transaction
+
         } catch (exception) {
 
             if (transaction !== undefined && transaction !== null)
