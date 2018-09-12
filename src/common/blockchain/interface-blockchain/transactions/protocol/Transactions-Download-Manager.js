@@ -21,7 +21,7 @@ class TransactionsDownloadManager{
         setTimeout( this._processSockets.bind(this), 5000 );
         setTimeout( this._processTransactions.bind(this), 2*1000 );
         setTimeout( this._deleteOldTransactions.bind(this), 2*60*1000 );
-        setTimeout( this._clearBannedList(), 60*60*1000 );
+        setInterval( this._clearBannedList(), 60*60*1000 );
 
     }
 
