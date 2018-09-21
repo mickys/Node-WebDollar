@@ -97,6 +97,7 @@ class ProcessWorker{
         });
 
         this._prevHash = '';
+        this._prevHashNonce = -1;
 
         await Blockchain.blockchain.sleep(1000);
 
@@ -140,12 +141,13 @@ class ProcessWorker{
 
         //console.log("SENDING ", start, end);
 
-        let sendMessage = 0;
+        if ( !this._lastData ) {
+            this._lastData = data;
+            this._sendDataTimeout = setTimeout(this._writeWork.bind(this, data), 10);
+        } else {
+            this._nextData = data;
+        }
 
-        if (this._lastData === undefined )
-            this._sendDataTimeout = setTimeout( this._writeWork.bind(this, data), 10 );
-        else
-            this._nextData = this._lastData;
 
     }
 
@@ -155,9 +157,13 @@ class ProcessWorker{
         try {
 
             await fs.writeFileSync( this._outputFilename + this.suffix, data, "binary");
+            clearTimeout( this._sendDataTimeout );
+
         } catch (exception){
+
             console.error("Error sending the data to GPU", exception);
             this._sendDataTimeout = setTimeout( this._writeWork.bind(this,data), 10 );
+
         }
 
     }
@@ -217,18 +223,24 @@ class ProcessWorker{
             if (data.bestNonce !== undefined) nonce = data.bestNonce;
             else nonce = data.nonce;
 
-            if (hash !== this._prevHash) {
+            if (hash !== this._prevHash && nonce !== this._prevHashNonce) {
 
-                console.info(data);
+                try{
+                    console.info(data);
 
-                if ( data.type === "b" || data.type === "s")
-                    data.h = this._count;
+                    if ( data.type === "b" || data.type === "s")
+                        data.h = this._count;
 
-                this._emit("message", data);
+                    this._emit("message", data);
+
+                } catch (exception){
+
+                }
 
                 this._prevHash = hash;
+                this._prevHashNonce = nonce;
 
-                if (this._nextData !== undefined) {
+                if (this._nextData !== undefined && !this._sendDataTimeout) {
                     this._sendDataTimeout = setTimeout(this._writeWork.bind(this, this._nextData), 10);
                     this._nextData = undefined;
                 }
