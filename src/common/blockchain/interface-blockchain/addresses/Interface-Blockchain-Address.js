@@ -502,7 +502,7 @@ class InterfaceBlockchainAddress{
             let signature = ed25519.sign( serialization, addressGenerated.privateKey.privateKey );
 
             transaction.from.addresses[addressIndex].signature = signature;
-            transaction.recalculateTxId();
+            transaction.recalculateTxId( true );
 
             return signature;
 

@@ -150,12 +150,12 @@ class InterfaceBlockchainTransaction{
         return Math.floor(Math.random() * 0xFF);
     }
 
-    _computeTxId(){
-        return WebDollarCrypto.SHA256( WebDollarCrypto.SHA256( this.serializeTransaction() ));
+    _computeTxId( rewrite ){
+        return WebDollarCrypto.SHA256( WebDollarCrypto.SHA256( this.serializeTransaction( rewrite ) ));
     }
 
-    recalculateTxId(){
-        this.txId = this._computeTxId();
+    recalculateTxId( rewrite ){
+        this.txId = this._computeTxId( rewrite );
     }
 
     /**
