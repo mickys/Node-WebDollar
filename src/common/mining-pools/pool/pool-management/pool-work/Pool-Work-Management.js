@@ -90,7 +90,6 @@ class PoolWorkManagement{
     async processWork(minerInstance, work, prevBlock){
 
         let result = false;
-
         try{
 
             if (minerInstance === undefined) throw {message: "minerInstance is undefined"};
@@ -195,8 +194,7 @@ class PoolWorkManagement{
             blockInformationMinerInstance.calculateDifficulty();
             blockInformationMinerInstance.adjustDifficulty(undefined, true);
 
-            //statistics
-            this.poolManagement.poolStatistics.addStatistics(blockInformationMinerInstance._workDifficulty, minerInstance);
+            this.poolManagement.poolStatistics.addStatistics(blockInformationMinerInstance._workDifficulty, work, minerInstance);
 
             result = true;
 

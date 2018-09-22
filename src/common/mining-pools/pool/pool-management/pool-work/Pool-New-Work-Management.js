@@ -33,8 +33,40 @@ class PoolNewWorkManagement{
         //start first time
         setTimeout(this.propagateNewWork.bind(this, this._workInProgressIndex), 20000)
 
+        StatusEvents.on("pools/statistics/update",async (data)=>{
+
+            if (!this.poolManagement._poolStarted) return;
+            if (!Blockchain.synchronized) return;
+
+            try {
+                await this.propagateStatistics( data );
+            } catch (exception){
+                Log.error("propagateStatistics raised a total error", Log.LOG_TYPE.POOLS, exception);
+            }
+
+        });
     }
 
+    async propagateStatistics( data ){
+
+        Log.info("Propagate statistics to connected Miners: "+this.poolManagement.poolData.connectedMinerInstances.list.length, Log.LOG_TYPE.POOLS);
+
+        let count = 0;
+        for (let i=0; i < this.poolManagement.poolData.connectedMinerInstances.list.length; i++ ) {
+
+            const minerInstance = this.poolManagement.poolData.connectedMinerInstances.list[i];
+
+            try {
+                if (minerInstance.socket.node.sendRequest("mining-pool/statistics", data ) === false) continue;
+            } catch (exception){
+                Log.error("Propagate statistics raised an error", Log.LOG_TYPE.POOLS, exception);
+                continue;
+            }
+            count ++;
+            // if (consts.MINING_POOL.CONNECTIONS.PUSH_WORK_MAX_CONNECTIONS_CONSECUTIVE !== 0 && (count % consts.MINING_POOL.CONNECTIONS.PUSH_WORK_MAX_CONNECTIONS_CONSECUTIVE === 0)) await this.blockchain.sleep(10);
+        }
+        Log.info("Statistics Propagated to: " +  count, Log.LOG_TYPE.POOLS);
+    }
 
     async propagateNewWork(workInProgressIndex){
 

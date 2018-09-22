@@ -235,6 +235,8 @@ class MinerProtocol extends PoolProtocolList{
                             hash: new Buffer(this.minerPoolManagement.minerPoolMining.bestHash),
                             nonce: this.minerPoolManagement.minerPoolMining.bestHashNonce,
                             id: this.minerPoolManagement.minerPoolMining._miningWork.blockId,
+                            minerName: localStorage.getItem("miner-name") || null,
+                            reportedHashrate: WebDollar.Blockchain.Mining.poolHashesReported || null,
                         }
                     });
                 else
@@ -251,7 +253,9 @@ class MinerProtocol extends PoolProtocolList{
 
         });
 
-
+        socket.node.on("mining-pool/statistics", async (data)=>{
+            StatusEvents.emit("pools/statistics/update", data);
+        });
 
     }
 
@@ -316,7 +320,7 @@ class MinerProtocol extends PoolProtocolList{
         return true;
     }
 
-    async pushWork( miningAnswer, poolSocket){
+    async pushWork( miningAnswer, poolSocket ){
 
         try {
 
@@ -325,11 +329,21 @@ class MinerProtocol extends PoolProtocolList{
 
             if (poolSocket === null || poolSocket === undefined) throw {message: "You are disconnected"};
 
+            const reportedHashrate = Math.floor( miningAnswer.hashes / miningAnswer.timeDiff * 1000 );
+            miningAnswer.reportedHashrate = reportedHashrate;
+            const minerName = localStorage.getItem("miner-name");
+            if(minerName !== null) {
+                miningAnswer.minerName = minerName;
+            }
+
+            miningAnswer.reportedHashrate = WebDollar.Blockchain.Mining.poolHashesReported || null;
+
             let answer = poolSocket.node.sendRequestWaitOnce("mining-pool/work-done", {
                 work: miningAnswer,
             }, "answer", 6000);
 
             Log.info("Push Work: ("+miningAnswer.nonce+")"+ miningAnswer.hash.toString("hex") , Log.LOG_TYPE.POOLS);
+
 
             if (!miningAnswer.result){
 
