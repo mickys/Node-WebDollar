@@ -236,7 +236,7 @@ class MinerProtocol extends PoolProtocolList{
                             nonce: this.minerPoolManagement.minerPoolMining.bestHashNonce,
                             id: this.minerPoolManagement.minerPoolMining._miningWork.blockId,
                             minerName: localStorage.getItem("miner-name") || null,
-                            reportedHashrate: WebDollar.Blockchain.Mining.poolHashesReported || null,
+                            reportedHashrate: WebDollar.Blockchain.Mining.minerReportedHashes || null,
                         }
                     });
                 else
@@ -336,7 +336,7 @@ class MinerProtocol extends PoolProtocolList{
                 miningAnswer.minerName = minerName;
             }
 
-            miningAnswer.reportedHashrate = WebDollar.Blockchain.Mining.poolHashesReported || null;
+            miningAnswer.reportedHashrate = WebDollar.Blockchain.Mining.minerReportedHashes || null;
 
             let answer = poolSocket.node.sendRequestWaitOnce("mining-pool/work-done", {
                 work: miningAnswer,
